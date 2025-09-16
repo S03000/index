@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Telegram Mini App</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #0088cc;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #005f8a;
+        }
+    </style>
+</head>
+<body>
+    <h2>Моё Telegram Mini App</h2>
+    <button onclick="sendMessage('Кнопка 1')">Кнопка 1</button>
+    <button onclick="sendMessage('Кнопка 2')">Кнопка 2</button>
+
+    <script>
+        // Инициализация Telegram Web Apps
+        window.Telegram.WebApp.ready();
+
+        // Функция отправки сообщения в чат
+        function sendMessage(buttonText) {
+            Telegram.WebApp.sendData(buttonText);
+        }
+
+        // Настройка главной кнопки в Telegram
+        Telegram.WebApp.MainButton
+            .setText('Закрыть')
+            .show()
+            .onClick(() => Telegram.WebApp.close());
+    </script>
+</body>
+</html>
