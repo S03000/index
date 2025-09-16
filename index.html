@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Змейка — Оптимизировано для Telegram и мобильных</title>
+<title>Змейка — Расширенная версия для Telegram</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   body {
@@ -16,7 +16,6 @@
     display: block;
     margin: 0 auto;
     background: linear-gradient(135deg, #050, #020);
-    border-radius: 0;
     box-shadow: 0 0 20px #0a0;
     touch-action: none;
     max-width: 100%;
@@ -24,15 +23,26 @@
     width: 100%;
     height: auto;
   }
-  #controls {
-    text-align: center;
-    margin: 10px auto;
+  #menu, #game-over {
     position: absolute;
-    top: 0;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translate(-50%, -50%);
+    text-align: center;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 0 15px #0a0;
+    width: 80%;
+    max-width: 300px;
   }
-  select {
+  #menu h1, #game-over h1 {
+    font-size: 28px;
+    margin: 10px 0;
+    color: #0f0;
+    text-shadow: 0 0 8px #0f0;
+  }
+  select, button {
     font-size: 16px;
     margin: 5px;
     padding: 8px 16px;
@@ -43,8 +53,9 @@
     cursor: pointer;
     box-shadow: 0 3px 8px #060;
     transition: background 0.3s ease;
+    width: 80%;
   }
-  select:hover {
+  select:hover, button:hover {
     background: linear-gradient(135deg, #4d4, #090);
   }
 </style>
@@ -53,12 +64,26 @@
 
 <canvas id="game"></canvas>
 
-<div id="controls">
+<div id="menu">
+  <h1>Змейка</h1>
   <select id="skinSelect">
     <option value="classic">Классический</option>
     <option value="green">Зелёный</option>
     <option value="rainbow">Радуга</option>
   </select>
+  <select id="speedSelect">
+    <option value="14">Медленно</option>
+    <option value="12">Нормально</option>
+    <option value="8">Быстро</option>
+  </select>
+  <button id="startBtn">Начать игру</button>
+</div>
+
+<div id="game-over" style="display: none;">
+  <h1>Игра окончена</h1>
+  <p id="finalScore">Очки: 0</p>
+  <p id="highScore">Рекорд: 0</p>
+  <button id="playAgainBtn">Играть снова</button>
 </div>
 
 <script>
@@ -71,8 +96,8 @@
   const ctx = canvas.getContext('2d');
   const box = 20;
 
-  // Адаптация размера canvas под экран устройства
-  const maxSize = Math.min(window.innerWidth, window.innerHeight - 40); // Учитываем место для skinSelect
+  // Адаптация размера canvas
+  const maxSize = Math.min(window.innerWidth, window.innerHeight);
   const gridSize = Math.floor(maxSize / box) * box;
   canvas.width = gridSize;
   canvas.height = gridSize;
@@ -81,29 +106,28 @@
   let direction = 'RIGHT';
   let food = {};
   let score = 0;
+  let highScore = localStorage.getItem('snakeHighScore') ? parseInt(localStorage.getItem('snakeHighScore')) : 0;
   let skin = 'classic';
-  let gameStarted = false;
-
-  const animationSteps = 14;
+  let animationSteps = 8;
   let animationProgress = 0;
   let prevPositions = [];
+  let particles = [];
+  let gameStarted = false;
+  let gamePaused = false;
 
-  const particles = [];
-
-  // Сенсорный ввод (свайпы и старт по тапу)
+  // Сенсорный ввод
   let touchStartX = 0;
   let touchStartY = 0;
 
   canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
+    if (gamePaused) {
+      gamePaused = false;
+      mainLoop();
+      return;
+    }
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
-    if (!gameStarted) {
-      gameStarted = true;
-      skin = document.getElementById('skinSelect').value;
-      initGame();
-      mainLoop();
-    }
   }, { passive: false });
 
   canvas.addEventListener('touchmove', (e) => {
@@ -112,7 +136,7 @@
 
   canvas.addEventListener('touchend', (e) => {
     e.preventDefault();
-    if (!gameStarted) return;
+    if (!gameStarted || gamePaused) return;
     const touchEndX = e.changedTouches[0].clientX;
     const touchEndY = e.changedTouches[0].clientY;
     const dx = touchEndX - touchStartX;
@@ -139,6 +163,9 @@
     animationProgress = 0;
     prevPositions = snake.map(s => ({...s}));
     food = randomFood();
+    gamePaused = false;
+    document.getElementById('menu').style.display = 'none';
+    document.getElementById('game-over').style.display = 'none';
   }
 
   function randomFood() {
@@ -157,15 +184,27 @@
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText('Очки: ' + score, 10, 10);
+    ctx.fillText('Рекорд: ' + highScore, 10, 30);
+    if (gamePaused) {
+      ctx.font = '30px Segoe UI';
+      ctx.fillStyle = '#0f0';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Пауза (тап для продолжения)', canvas.width / 2, canvas.height / 2);
+    }
   }
 
   function handleKey(e) {
-    if (!gameStarted) {
-      gameStarted = true;
-      skin = document.getElementById('skinSelect').value;
-      initGame();
-      mainLoop();
+    if (e.key === ' ') {
+      if (gameStarted && !gamePaused) {
+        gamePaused = true;
+      } else if (gameStarted && gamePaused) {
+        gamePaused = false;
+        mainLoop();
+      }
+      return;
     }
+    if (!gameStarted || gamePaused) return;
     if (e.key === 'ArrowLeft' && direction !== 'RIGHT') direction = 'LEFT';
     else if (e.key === 'ArrowRight' && direction !== 'LEFT') direction = 'RIGHT';
     else if (e.key === 'ArrowUp' && direction !== 'DOWN') direction = 'UP';
@@ -173,7 +212,7 @@
   }
 
   function moveSnake() {
-    if (!gameStarted) return true;
+    if (!gameStarted || gamePaused) return true;
     if (animationProgress < animationSteps) {
       animationProgress++;
     } else {
@@ -197,6 +236,10 @@
 
       if (head.x === food.x && head.y === food.y) {
         score++;
+        if (score > highScore) {
+          highScore = score;
+          localStorage.setItem('snakeHighScore', highScore);
+        }
         createParticles(food.x, food.y, '#ff4444');
         food = randomFood();
       } else {
@@ -314,9 +357,10 @@
   }
 
   function gameOver() {
-    tg.showAlert('Игра окончена! Очки: ' + score);
     gameStarted = false;
-    initGame();
+    document.getElementById('finalScore').textContent = 'Очки: ' + score;
+    document.getElementById('highScore').textContent = 'Рекорд: ' + highScore;
+    document.getElementById('game-over').style.display = 'block';
   }
 
   function mainLoop() {
@@ -326,17 +370,40 @@
     }
   }
 
-  window.addEventListener('keydown', handleKey);
+  // Инициализация меню и обработчики
+  document.getElementById('startBtn').addEventListener('click', () => {
+    skin = document.getElementById('skinSelect').value;
+    animationSteps = parseInt(document.getElementById('speedSelect').value);
+    gameStarted = true;
+    initGame();
+    mainLoop();
+  });
+
+  document.getElementById('playAgainBtn').addEventListener('click', () => {
+    skin = document.getElementById('skinSelect').value;
+    animationSteps = parseInt(document.getElementById('speedSelect').value);
+    gameStarted = true;
+    initGame();
+    mainLoop();
+  });
 
   document.getElementById('skinSelect').addEventListener('change', () => {
     skin = document.getElementById('skinSelect').value;
   });
 
-  initGame();
+  document.getElementById('speedSelect').addEventListener('change', () => {
+    animationSteps = parseInt(document.getElementById('speedSelect').value);
+  });
 
+  window.addEventListener('keydown', handleKey);
+
+  // Показать меню при загрузке
+  document.getElementById('menu').style.display = 'block';
+  document.getElementById('game-over').style.display = 'none';
+
+  initGame();
 })();
 </script>
 
 </body>
 </html>
-
