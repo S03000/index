@@ -14,27 +14,25 @@
   }
   canvas {
     display: block;
-    margin: 20px auto;
+    margin: 0 auto;
     background: linear-gradient(135deg, #050, #020);
-    border-radius: 15px;
+    border-radius: 0;
     box-shadow: 0 0 20px #0a0;
     touch-action: none;
     max-width: 100%;
+    max-height: 100vh;
+    width: 100%;
     height: auto;
-  }
-  #score {
-    text-align: center;
-    font-size: 20px;
-    font-weight: 700;
-    margin: 10px auto;
-    color: #0f0;
-    text-shadow: 0 0 8px #0f0;
   }
   #controls {
     text-align: center;
     margin: 10px auto;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
   }
-  button, select {
+  select {
     font-size: 16px;
     margin: 5px;
     padding: 8px 16px;
@@ -46,47 +44,21 @@
     box-shadow: 0 3px 8px #060;
     transition: background 0.3s ease;
   }
-  button:hover, select:hover {
+  select:hover {
     background: linear-gradient(135deg, #4d4, #090);
-  }
-  #mobile-controls {
-    text-align: center;
-    margin-top: 15px;
-  }
-  #mobile-controls button {
-    font-size: 24px;
-    width: 50px; height: 50px;
-    margin: 5px;
-    border-radius: 50%;
-    background: linear-gradient(145deg, #080, #030);
-    box-shadow: 1px 1px 5px #050;
-    color: #afa;
-  }
-  #mobile-controls button:hover {
-    background: linear-gradient(145deg, #0b0, #050);
-    box-shadow: 2px 2px 8px #0b0;
   }
 </style>
 </head>
 <body>
 
 <canvas id="game"></canvas>
-<div id="score">Очки: 0</div>
 
 <div id="controls">
-  <button id="startBtn">Начать игру</button>
   <select id="skinSelect">
     <option value="classic">Классический</option>
     <option value="green">Зелёный</option>
     <option value="rainbow">Радуга</option>
   </select>
-</div>
-
-<div id="mobile-controls">
-  <button id="upBtn">↑</button><br/>
-  <button id="leftBtn">←</button>
-  <button id="downBtn">↓</button>
-  <button id="rightBtn">→</button>
 </div>
 
 <script>
@@ -97,11 +69,11 @@
 
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
-  const box = 20; // Уменьшен размер блока для мобильных
+  const box = 20;
 
-  // Адаптация размера canvas для мобильных устройств
-  const maxWidth = Math.min(window.innerWidth - 40, 400); // Ограничение по ширине с отступами
-  const gridSize = Math.floor(maxWidth / box) * box;
+  // Адаптация размера canvas под экран устройства
+  const maxSize = Math.min(window.innerWidth, window.innerHeight - 40); // Учитываем место для skinSelect
+  const gridSize = Math.floor(maxSize / box) * box;
   canvas.width = gridSize;
   canvas.height = gridSize;
 
@@ -110,14 +82,15 @@
   let food = {};
   let score = 0;
   let skin = 'classic';
+  let gameStarted = false;
 
-  const animationSteps = 8; // Увеличено для более плавного движения на мобильных
+  const animationSteps = 8;
   let animationProgress = 0;
   let prevPositions = [];
 
   const particles = [];
 
-  // Сенсорный ввод (свайпы на canvas)
+  // Сенсорный ввод (свайпы и старт по тапу)
   let touchStartX = 0;
   let touchStartY = 0;
 
@@ -125,6 +98,12 @@
     e.preventDefault();
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
+    if (!gameStarted) {
+      gameStarted = true;
+      skin = document.getElementById('skinSelect').value;
+      initGame();
+      mainLoop();
+    }
   }, { passive: false });
 
   canvas.addEventListener('touchmove', (e) => {
@@ -133,11 +112,12 @@
 
   canvas.addEventListener('touchend', (e) => {
     e.preventDefault();
+    if (!gameStarted) return;
     const touchEndX = e.changedTouches[0].clientX;
     const touchEndY = e.changedTouches[0].clientY;
     const dx = touchEndX - touchStartX;
     const dy = touchEndY - touchStartY;
-    const threshold = 20; // Уменьшен порог для более чувствительных свайпов
+    const threshold = 20;
 
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > threshold) {
       if (dx > 0 && direction !== 'LEFT') direction = 'RIGHT';
@@ -159,7 +139,6 @@
     animationProgress = 0;
     prevPositions = snake.map(s => ({...s}));
     food = randomFood();
-    updateScore();
   }
 
   function randomFood() {
@@ -172,19 +151,30 @@
     return {x, y};
   }
 
-  function updateScore() {
-    document.getElementById('score').textContent = 'Очки: ' + score;
+  function drawScore() {
+    ctx.font = '20px Segoe UI';
+    ctx.fillStyle = '#0f0';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('Очки: ' + score, 10, 10);
   }
 
   function handleKey(e) {
-    if(e.key === 'ArrowLeft' && direction !== 'RIGHT') direction = 'LEFT';
-    else if(e.key === 'ArrowRight' && direction !== 'LEFT') direction = 'RIGHT';
-    else if(e.key === 'ArrowUp' && direction !== 'DOWN') direction = 'UP';
-    else if(e.key === 'ArrowDown' && direction !== 'UP') direction = 'DOWN';
+    if (!gameStarted) {
+      gameStarted = true;
+      skin = document.getElementById('skinSelect').value;
+      initGame();
+      mainLoop();
+    }
+    if (e.key === 'ArrowLeft' && direction !== 'RIGHT') direction = 'LEFT';
+    else if (e.key === 'ArrowRight' && direction !== 'LEFT') direction = 'RIGHT';
+    else if (e.key === 'ArrowUp' && direction !== 'DOWN') direction = 'UP';
+    else if (e.key === 'ArrowDown' && direction !== 'UP') direction = 'DOWN';
   }
 
   function moveSnake() {
-    if(animationProgress < animationSteps) {
+    if (!gameStarted) return true;
+    if (animationProgress < animationSteps) {
       animationProgress++;
     } else {
       animationProgress = 0;
@@ -195,19 +185,18 @@
         case 'UP': head.y -= box; break;
         case 'DOWN': head.y += box; break;
       }
-      if(head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
+      if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
         gameOver();
         return false;
       }
-      if(snake.some((seg,i) => i > 0 && seg.x === head.x && seg.y === head.y)) {
+      if (snake.some((seg, i) => i > 0 && seg.x === head.x && seg.y === head.y)) {
         gameOver();
         return false;
       }
       snake.unshift(head);
 
-      if(head.x === food.x && head.y === food.y) {
+      if (head.x === food.x && head.y === food.y) {
         score++;
-        updateScore();
         createParticles(food.x, food.y, '#ff4444');
         food = randomFood();
       } else {
@@ -219,18 +208,18 @@
   }
 
   function drawSnake() {
-    for(let i=0; i < snake.length; i++) {
+    for (let i = 0; i < snake.length; i++) {
       const from = prevPositions[i] || snake[i];
       const to = snake[i];
       const lerpX = from.x + (to.x - from.x) * (animationProgress / animationSteps);
       const lerpY = from.y + (to.y - from.y) * (animationProgress / animationSteps);
 
       let color;
-      if(skin === 'classic') {
+      if (skin === 'classic') {
         color = i === 0 ? '#0f0' : '#070';
-      } else if(skin === 'green') {
+      } else if (skin === 'green') {
         color = `hsl(${(i * 30) % 120 + 60}, 100%, 40%)`;
-      } else if(skin === 'rainbow') {
+      } else if (skin === 'rainbow') {
         color = `hsl(${(i * 20) % 360}, 100%, 50%)`;
       }
 
@@ -259,9 +248,9 @@
   function drawFood() {
     const {x, y} = food;
 
-    foodScale += foodScaleDirection * 0.015; // Замедлена анимация еды для мобильных
-    if(foodScale > 1.2) foodScaleDirection = -1;
-    else if(foodScale < 0.9) foodScaleDirection = 1;
+    foodScale += foodScaleDirection * 0.015;
+    if (foodScale > 1.2) foodScaleDirection = -1;
+    else if (foodScale < 0.9) foodScaleDirection = 1;
 
     ctx.save();
     ctx.translate(x + box/2, y + box/2);
@@ -286,7 +275,7 @@
   }
 
   function createParticles(x, y, color) {
-    for(let i=0; i < 10; i++) { // Уменьшено количество частиц для производительности
+    for (let i = 0; i < 10; i++) {
       particles.push({
         x: x + box/2,
         y: y + box/2,
@@ -300,7 +289,7 @@
   }
 
   function drawParticles() {
-    for(let i = particles.length - 1; i >= 0; i--) {
+    for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
       ctx.fillStyle = p.color;
       ctx.beginPath();
@@ -312,7 +301,7 @@
       p.life--;
       p.size *= 0.96;
 
-      if(p.life <= 0 || p.size < 0.1) particles.splice(i, 1);
+      if (p.life <= 0 || p.size < 0.1) particles.splice(i, 1);
     }
   }
 
@@ -321,32 +310,27 @@
     drawFood();
     drawSnake();
     drawParticles();
+    drawScore();
   }
 
   function gameOver() {
     tg.showAlert('Игра окончена! Очки: ' + score);
+    gameStarted = false;
     initGame();
   }
 
   function mainLoop() {
-    if(moveSnake()) {
+    if (moveSnake()) {
       drawGame();
       requestAnimationFrame(mainLoop);
     }
   }
 
-  document.getElementById('upBtn').onclick = () => { if(direction !== 'DOWN') direction = 'UP'; };
-  document.getElementById('downBtn').onclick = () => { if(direction !== 'UP') direction = 'DOWN'; };
-  document.getElementById('leftBtn').onclick = () => { if(direction !== 'RIGHT') direction = 'LEFT'; };
-  document.getElementById('rightBtn').onclick = () => { if(direction !== 'LEFT') direction = 'RIGHT'; };
-
   window.addEventListener('keydown', handleKey);
 
-  document.getElementById('startBtn').onclick = () => {
+  document.getElementById('skinSelect').addEventListener('change', () => {
     skin = document.getElementById('skinSelect').value;
-    initGame();
-    mainLoop();
-  };
+  });
 
   initGame();
 
