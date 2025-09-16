@@ -1,348 +1,311 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Змейка - Telegram Mini App</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            transition: background-color 0.3s, color 0.3s;
-        }
-
-        #game-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            max-width: 400px;
-            max-height: 400px;
-            margin: auto;
-            overflow: hidden;
-        }
-
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            transition: box-shadow 0.3s;
-        }
-
-        #start-screen, #game-over-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background-color: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-            border-radius: 10px;
-        }
-
-        #start-screen.visible, #game-over-screen.visible {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        h1, h2 {
-            margin: 10px 0;
-            font-size: 24px;
-            text-align: center;
-        }
-
-        p {
-            margin: 5px 0;
-            font-size: 16px;
-        }
-
-        button {
-            padding: 10px 20px;
-            margin: 10px 0;
-            font-size: 16px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.1s;
-        }
-
-        button:active {
-            transform: scale(0.98);
-        }
-
-        #sound-toggle {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 20px;
-            background: none;
-            border: none;
-            cursor: pointer;
-        }
-
-        #infinite-walls-toggle {
-            margin: 10px 0;
-            display: flex;
-            align-items: center;
-        }
-
-        #infinite-walls-toggle input {
-            margin-right: 10px;
-        }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Змейка — Обновлённый код</title>
+<style>
+  body {
+    margin: 0; padding: 0; background: #111; color: #eee;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    user-select: none;
+  }
+  canvas {
+    display: block;
+    margin: 30px auto;
+    background: linear-gradient(135deg, #050, #020);
+    border-radius: 15px;
+    box-shadow: 0 0 20px #0a0;
+  }
+  #score {
+    text-align: center;
+    font-size: 24px;
+    font-weight: 700;
+    margin: 10px auto;
+    color: #0f0;
+    text-shadow: 0 0 8px #0f0;
+  }
+  #controls {
+    text-align: center;
+    margin: 10px auto;
+  }
+  button, select {
+    font-size: 18px;
+    margin: 5px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, #2a2, #060);
+    color: #dff;
+    cursor: pointer;
+    box-shadow: 0 3px 8px #060;
+    transition: background 0.3s ease;
+  }
+  button:hover, select:hover {
+    background: linear-gradient(135deg, #4d4, #090);
+  }
+  #mobile-controls {
+    text-align: center;
+    margin-top: 20px;
+  }
+  #mobile-controls button {
+    font-size: 28px;
+    width: 60px; height: 60px;
+    margin: 5px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #080, #030);
+    box-shadow: 1px 1px 5px #050;
+    color: #afa;
+  }
+  #mobile-controls button:hover {
+    background: linear-gradient(145deg, #0b0, #050);
+    box-shadow: 2px 2px 8px #0b0;
+  }
+</style>
 </head>
 <body>
-    <div id="game-container">
-        <canvas id="game-canvas"></canvas>
-        <div id="start-screen" class="visible">
-            <h1>Змейка</h1>
-            <p>Лучший счёт: <span id="best-score">0</span></p>
-            <div id="infinite-walls-toggle">
-                <input type="checkbox" id="infinite-walls" checked>
-                <label for="infinite-walls">Бесконечные стены</label>
-            </div>
-            <button id="start-button">Старт</button>
-        </div>
-        <div id="game-over-screen">
-            <h2>Game Over</h2>
-            <p>Счёт: <span id="final-score">0</span></p>
-            <p>Лучший счёт: <span id="best-score-go">0</span></p>
-        </div>
-        <button id="sound-toggle">🔊</button>
-    </div>
 
-    <script>
-        // Инициализация Telegram Web App
-        const webApp = window.Telegram.WebApp;
-        webApp.ready();
-        webApp.expand(); // Расширить на весь экран
+<canvas id="game" width="600" height="600"></canvas>
+<div id="score">Очки: 0</div>
 
-        // Получение темных параметров
-        const themeParams = webApp.themeParams;
-        const bgColor = themeParams.bg_color || '#f0f0f0';
-        const textColor = themeParams.text_color || '#222222';
-        const buttonColor = themeParams.button_color || '#40a7e3';
-        const buttonTextColor = themeParams.button_text_color || '#ffffff';
-        const secondaryBgColor = themeParams.secondary_bg_color || '#ffffff';
-        const snakeColor = buttonColor;
-        const appleColor = '#ed4956';
+<div id="controls">
+  <button id="startBtn">Начать игру</button>
+  <select id="skinSelect">
+    <option value="classic">Классический</option>
+    <option value="green">Зелёный</option>
+    <option value="rainbow">Радуга</option>
+  </select>
+</div>
 
-        // Применение темы
-        document.body.style.backgroundColor = bgColor;
-        document.body.style.color = textColor;
-        const buttons = document.querySelectorAll('button');
-        buttons.forEach(btn => {
-            btn.style.backgroundColor = buttonColor;
-            btn.style.color = buttonTextColor;
-        });
-        const screens = document.querySelectorAll('#start-screen, #game-over-screen');
-        screens.forEach(screen => {
-            screen.style.backgroundColor = `rgba(${parseInt(secondaryBgColor.slice(1,3),16)}, ${parseInt(secondaryBgColor.slice(3,5),16)}, ${parseInt(secondaryBgColor.slice(5,7),16)}, 0.8)`;
-        });
+<div id="mobile-controls">
+  <button id="upBtn">↑</button><br/>
+  <button id="leftBtn">←</button>
+  <button id="downBtn">↓</button>
+  <button id="rightBtn">→</button>
+</div>
 
-        // Обработчик изменения вида
-        webApp.onEvent('viewportChanged', () => {
-            webApp.expand();
-        });
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const box = 30;
 
-        // Настройка Main Button
-        webApp.MainButton.hide();
-        webApp.MainButton.setText('Играть снова');
-        webApp.MainButton.color = buttonColor;
-        webApp.MainButton.textColor = buttonTextColor;
+  let snake = [];
+  let direction = 'RIGHT';
+  let food = {};
+  let score = 0;
+  let skin = 'classic';
 
-        // Логика игры
-        const canvas = document.getElementById('game-canvas');
-        const ctx = canvas.getContext('2d');
-        const gridSize = 20;
-        let cols, rows;
+  const animationSteps = 5;
+  let animationProgress = 0;
+  let prevPositions = [];
 
-        function resizeCanvas() {
-            const size = Math.min(window.innerWidth, window.innerHeight) * 0.9;
-            canvas.width = Math.floor(size / gridSize) * gridSize;
-            canvas.height = canvas.width; // Квадратное поле
-            cols = canvas.width / gridSize;
-            rows = canvas.height / gridSize;
-        }
+  const particles = [];
 
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
+  function initGame() {
+    snake = [
+      {x: 9 * box, y: 10 * box},
+      {x: 8 * box, y: 10 * box},
+      {x: 7 * box, y: 10 * box}
+    ];
+    direction = 'RIGHT';
+    score = 0;
+    animationProgress = 0;
+    prevPositions = snake.map(s => ({...s}));
+    food = randomFood();
+    updateScore();
+  }
 
-        let snake = [{ x: 5, y: 5 }];
-        let direction = { x: 1, y: 0 };
-        let apple = { x: 10, y: 10 };
-        let score = 0;
-        let bestScore = localStorage.getItem('bestScore') || 0;
-        document.getElementById('best-score').textContent = bestScore;
-        document.getElementById('best-score-go').textContent = bestScore;
-        let gameInterval;
-        let speed = 150; // Начальная скорость (ms per frame)
-        let soundEnabled = true;
-        let infiniteWalls = true;
+  function randomFood() {
+    let x, y, collision;
+    do {
+      x = Math.floor(Math.random() * (canvas.width / box)) * box;
+      y = Math.floor(Math.random() * (canvas.height / box)) * box;
+      collision = snake.some(seg => seg.x === x && seg.y === y);
+    } while (collision);
+    return {x, y};
+  }
 
-        const eatSound = new Audio('data:audio/mpeg;base64,/+NIxAAAAAAAAAAAAAAA/+NIxAAAAANIAAAD/UNT...'); // Заменить на base64 короткого звука (или ссылку, но для мини-app лучше base64)
-        const gameOverSound = new Audio('data:audio/mpeg;base64,/+NIxAAAAAAAAAAAAAAA/+NIxAAAAANIAAAD/UNT...'); // Аналогично
+  function updateScore() {
+    document.getElementById('score').textContent = 'Очки: ' + score;
+  }
 
-        document.getElementById('sound-toggle').addEventListener('click', () => {
-            soundEnabled = !soundEnabled;
-            document.getElementById('sound-toggle').textContent = soundEnabled ? '🔊' : '🔇';
-        });
+  function handleKey(e) {
+    if(e.key === 'ArrowLeft' && direction !== 'RIGHT') direction = 'LEFT';
+    else if(e.key === 'ArrowRight' && direction !== 'LEFT') direction = 'RIGHT';
+    else if(e.key === 'ArrowUp' && direction !== 'DOWN') direction = 'UP';
+    else if(e.key === 'ArrowDown' && direction !== 'UP') direction = 'DOWN';
+  }
 
-        document.getElementById('infinite-walls').addEventListener('change', (e) => {
-            infiniteWalls = e.target.checked;
-        });
+  function moveSnake() {
+    if(animationProgress < animationSteps) {
+      animationProgress++;
+    } else {
+      animationProgress = 0;
+      let head = {...snake[0]};
+      switch(direction) {
+        case 'LEFT': head.x -= box; break;
+        case 'RIGHT': head.x += box; break;
+        case 'UP': head.y -= box; break;
+        case 'DOWN': head.y += box; break;
+      }
+      if(head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
+        gameOver();
+        return false;
+      }
+      if(snake.some((seg,i) => i > 0 && seg.x === head.x && seg.y === head.y)) {
+        gameOver();
+        return false;
+      }
+      snake.unshift(head);
 
-        // Управление клавиатурой
-        document.addEventListener('keydown', (e) => {
-            switch (e.key) {
-                case 'ArrowUp': if (direction.y !== 1) direction = { x: 0, y: -1 }; break;
-                case 'ArrowDown': if (direction.y !== -1) direction = { x: 0, y: 1 }; break;
-                case 'ArrowLeft': if (direction.x !== 1) direction = { x: -1, y: 0 }; break;
-                case 'ArrowRight': if (direction.x !== -1) direction = { x: 1, y: 0 }; break;
-            }
-        });
+      if(head.x === food.x && head.y === food.y) {
+        score++;
+        updateScore();
+        createParticles(food.x, food.y, '#ff4444');
+        food = randomFood();
+      } else {
+        snake.pop();
+      }
+      prevPositions = snake.map(s => ({...s}));
+    }
+    return true;
+  }
 
-        // Управление свайпами
-        let touchStartX = 0;
-        let touchStartY = 0;
-        canvas.addEventListener('touchstart', (e) => {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-        });
+  function drawSnake() {
+    for(let i=0; i < snake.length; i++) {
+      const from = prevPositions[i] || snake[i];
+      const to = snake[i];
+      const lerpX = from.x + (to.x - from.x) * (animationProgress / animationSteps);
+      const lerpY = from.y + (to.y - from.y) * (animationProgress / animationSteps);
 
-        canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const touchEndX = e.touches[0].clientX;
-            const touchEndY = e.touches[0].clientY;
-            const dx = touchEndX - touchStartX;
-            const dy = touchEndY - touchStartY;
+      let color;
+      if(skin === 'classic') {
+        color = i === 0 ? '#0f0' : '#070';
+      } else if(skin === 'green') {
+        color = `hsl(${(i * 30) % 120 + 60}, 100%, 40%)`;
+      } else if(skin === 'rainbow') {
+        color = `hsl(${(i * 20) % 360}, 100%, 50%)`;
+      }
 
-            if (Math.abs(dx) > Math.abs(dy)) {
-                if (dx > 0 && direction.x !== -1) direction = { x: 1, y: 0 };
-                else if (dx < 0 && direction.x !== 1) direction = { x: -1, y: 0 };
-            } else {
-                if (dy > 0 && direction.y !== -1) direction = { x: 0, y: 1 };
-                else if (dy < 0 && direction.y !== 1) direction = { x: 0, y: -1 };
-            }
-        });
+      const grad = ctx.createLinearGradient(lerpX, lerpY, lerpX, lerpY + box);
+      grad.addColorStop(0, color);
+      grad.addColorStop(1, '#003300');
+      ctx.fillStyle = grad;
 
-        function generateApple() {
-            apple.x = Math.floor(Math.random() * cols);
-            apple.y = Math.floor(Math.random() * rows);
-        }
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 2;
 
-        function draw() {
-            // Фон
-            ctx.fillStyle = secondaryBgColor;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(lerpX, lerpY, box, box);
 
-            // Змейка
-            ctx.fillStyle = snakeColor;
-            snake.forEach(part => {
-                ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize - 1, gridSize - 1);
-            });
+      ctx.shadowColor = 'transparent';
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(lerpX, lerpY, box, box);
+    }
+  }
 
-            // Яблоко с анимацией
-            ctx.fillStyle = appleColor;
-            ctx.beginPath();
-            ctx.arc(apple.x * gridSize + gridSize / 2, apple.y * gridSize + gridSize / 2, gridSize / 2 - 1, 0, 2 * Math.PI);
-            ctx.fill();
+  let foodScale = 1;
+  let foodScaleDirection = 1;
 
-            // Счёт
-            ctx.fillStyle = textColor;
-            ctx.font = '16px sans-serif';
-            ctx.fillText(`Счёт: ${score}`, 10, 20);
-        }
+  function drawFood() {
+    const {x, y} = food;
 
-        function update() {
-            const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+    foodScale += foodScaleDirection * 0.02;
+    if(foodScale > 1.3) foodScaleDirection = -1;
+    else if(foodScale < 1) foodScaleDirection = 1;
 
-            // Бесконечные стены
-            if (infiniteWalls) {
-                if (head.x >= cols) head.x = 0;
-                else if (head.x < 0) head.x = cols - 1;
-                if (head.y >= rows) head.y = 0;
-                else if (head.y < 0) head.y = rows - 1;
-            } else {
-                if (head.x < 0 || head.x >= cols || head.y < 0 || head.y >= rows) return gameOver();
-            }
+    ctx.save();
+    ctx.translate(x + box/2, y + box/2);
+    ctx.scale(foodScale, foodScale);
+    ctx.translate(-box/2, -box/2);
 
-            // Столкновение с собой
-            if (snake.some(part => part.x === head.x && part.y === head.y)) return gameOver();
+    let grad = ctx.createRadialGradient(box/2, box/2, 2, box/2, box/2, box/2);
+    grad.addColorStop(0, '#ff6666');
+    grad.addColorStop(1, '#990000');
+    ctx.fillStyle = grad;
 
-            snake.unshift(head);
+    ctx.shadowColor = '#ff4444';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
 
-            // Съедание яблока
-            if (head.x === apple.x && head.y === apple.y) {
-                score++;
-                generateApple();
-                if (soundEnabled) eatSound.play();
-                // Увеличение скорости (сложность)
-                if (score % 5 === 0) speed = Math.max(50, speed - 10);
-                clearInterval(gameInterval);
-                gameInterval = setInterval(update, speed);
-                // Микро-анимация: вибрация
-                if ('vibrate' in navigator) navigator.vibrate(100);
-            } else {
-                snake.pop();
-            }
+    ctx.beginPath();
+    ctx.arc(box/2, box/2, box/2 - 2, 0, 2 * Math.PI);
+    ctx.fill();
 
-            draw();
-        }
+    ctx.restore();
+  }
 
-        function startGame() {
-            snake = [{ x: 5, y: 5 }];
-            direction = { x: 1, y: 0 };
-            score = 0;
-            speed = 150;
-            generateApple();
-            document.getElementById('start-screen').classList.remove('visible');
-            clearInterval(gameInterval);
-            gameInterval = setInterval(update, speed);
-            webApp.MainButton.hide();
-        }
+  function createParticles(x, y, color) {
+    for(let i=0; i < 15; i++) {
+      particles.push({
+        x: x + box/2,
+        y: y + box/2,
+        vx: (Math.random() - 0.5) * 4,
+        vy: (Math.random() - 0.5) * 4,
+        life: 20 + Math.random()*10,
+        color: color,
+        size: 3 + Math.random()*3,
+      });
+    }
+  }
 
-        function gameOver() {
-            clearInterval(gameInterval);
-            if (soundEnabled) gameOverSound.play();
-            if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
-            document.getElementById('final-score').textContent = score;
-            if (score > bestScore) {
-                bestScore = score;
-                localStorage.setItem('bestScore', bestScore);
-                document.getElementById('best-score-go').textContent = bestScore;
-                document.getElementById('best-score').textContent = bestScore;
-            }
-            document.getElementById('game-over-screen').classList.add('visible');
-            webApp.MainButton.show();
-            webApp.MainButton.onClick(() => {
-                document.getElementById('game-over-screen').classList.remove('visible');
-                document.getElementById('start-screen').classList.add('visible');
-                webApp.MainButton.hide();
-            });
-        }
+  function drawParticles() {
+    for(let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, 2 * Math.PI);
+      ctx.fill();
 
-        document.getElementById('start-button').addEventListener('click', startGame);
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life--;
+      p.size *= 0.95;
 
-        // Добавить кнопку поделиться (опционально)
-        // webApp.showShareUrlButton({ url: 'https://t.me/...', text: `Мой счёт в Змейке: ${score}!` });
+      if(p.life <= 0 || p.size < 0.1) particles.splice(i, 1);
+    }
+  }
 
-        // Звуки: Нужно добавить реальные base64 или ссылки на звуки. Для примера опущено.
-    </script>
+  function drawGame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawFood();
+    drawSnake();
+    drawParticles();
+  }
+
+  function gameOver() {
+    alert('Игра окончена! Очки: ' + score);
+    initGame();
+  }
+
+  function mainLoop() {
+    if(moveSnake()) {
+      drawGame();
+      requestAnimationFrame(mainLoop);
+    }
+  }
+
+  document.getElementById('upBtn').onclick = () => { if(direction !== 'DOWN') direction = 'UP'; };
+  document.getElementById('downBtn').onclick = () => { if(direction !== 'UP') direction = 'DOWN'; };
+  document.getElementById('leftBtn').onclick = () => { if(direction !== 'RIGHT') direction = 'LEFT'; };
+  document.getElementById('rightBtn').onclick = () => { if(direction !== 'LEFT') direction = 'RIGHT'; };
+
+  window.addEventListener('keydown', handleKey);
+
+  document.getElementById('startBtn').onclick = () => {
+    skin = document.getElementById('skinSelect').value;
+    initGame();
+    mainLoop();
+  };
+
+  initGame();
+
+})();
+</script>
+
 </body>
 </html>
