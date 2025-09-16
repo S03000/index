@@ -3,26 +3,28 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Змейка — Обновлённый код для Telegram</title>
+<title>Змейка — Оптимизировано для Telegram и мобильных</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   body {
     margin: 0; padding: 0; background: #111; color: #eee;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     user-select: none;
-    touch-action: none; /* Отключаем стандартные жесты для лучшего сенсорного управления */
+    touch-action: none;
   }
   canvas {
     display: block;
-    margin: 30px auto;
+    margin: 20px auto;
     background: linear-gradient(135deg, #050, #020);
     border-radius: 15px;
     box-shadow: 0 0 20px #0a0;
-    touch-action: none; /* Предотвращаем зум и скролл на canvas */
+    touch-action: none;
+    max-width: 100%;
+    height: auto;
   }
   #score {
     text-align: center;
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 700;
     margin: 10px auto;
     color: #0f0;
@@ -33,9 +35,9 @@
     margin: 10px auto;
   }
   button, select {
-    font-size: 18px;
+    font-size: 16px;
     margin: 5px;
-    padding: 10px 20px;
+    padding: 8px 16px;
     border-radius: 10px;
     border: none;
     background: linear-gradient(135deg, #2a2, #060);
@@ -49,11 +51,11 @@
   }
   #mobile-controls {
     text-align: center;
-    margin-top: 20px;
+    margin-top: 15px;
   }
   #mobile-controls button {
-    font-size: 28px;
-    width: 60px; height: 60px;
+    font-size: 24px;
+    width: 50px; height: 50px;
     margin: 5px;
     border-radius: 50%;
     background: linear-gradient(145deg, #080, #030);
@@ -68,7 +70,7 @@
 </head>
 <body>
 
-<canvas id="game" width="600" height="600"></canvas>
+<canvas id="game"></canvas>
 <div id="score">Очки: 0</div>
 
 <div id="controls">
@@ -91,11 +93,17 @@
 (() => {
   const tg = window.Telegram.WebApp;
   tg.ready();
-  tg.expand(); // Разворачиваем приложение на весь экран в Telegram
+  tg.expand();
 
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
-  const box = 30;
+  const box = 20; // Уменьшен размер блока для мобильных
+
+  // Адаптация размера canvas для мобильных устройств
+  const maxWidth = Math.min(window.innerWidth - 40, 400); // Ограничение по ширине с отступами
+  const gridSize = Math.floor(maxWidth / box) * box;
+  canvas.width = gridSize;
+  canvas.height = gridSize;
 
   let snake = [];
   let direction = 'RIGHT';
@@ -103,13 +111,13 @@
   let score = 0;
   let skin = 'classic';
 
-  const animationSteps = 5;
+  const animationSteps = 8; // Увеличено для более плавного движения на мобильных
   let animationProgress = 0;
   let prevPositions = [];
 
   const particles = [];
 
-  // Адаптация для сенсорного ввода (свайпы на canvas)
+  // Сенсорный ввод (свайпы на canvas)
   let touchStartX = 0;
   let touchStartY = 0;
 
@@ -129,7 +137,7 @@
     const touchEndY = e.changedTouches[0].clientY;
     const dx = touchEndX - touchStartX;
     const dy = touchEndY - touchStartY;
-    const threshold = 30; // Минимальное расстояние для распознавания свайпа
+    const threshold = 20; // Уменьшен порог для более чувствительных свайпов
 
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > threshold) {
       if (dx > 0 && direction !== 'LEFT') direction = 'RIGHT';
@@ -142,9 +150,9 @@
 
   function initGame() {
     snake = [
-      {x: 9 * box, y: 10 * box},
-      {x: 8 * box, y: 10 * box},
-      {x: 7 * box, y: 10 * box}
+      {x: Math.floor(canvas.width / (2 * box)) * box, y: Math.floor(canvas.height / (2 * box)) * box},
+      {x: Math.floor(canvas.width / (2 * box) - 1) * box, y: Math.floor(canvas.height / (2 * box)) * box},
+      {x: Math.floor(canvas.width / (2 * box) - 2) * box, y: Math.floor(canvas.height / (2 * box)) * box}
     ];
     direction = 'RIGHT';
     score = 0;
@@ -251,9 +259,9 @@
   function drawFood() {
     const {x, y} = food;
 
-    foodScale += foodScaleDirection * 0.02;
-    if(foodScale > 1.3) foodScaleDirection = -1;
-    else if(foodScale < 1) foodScaleDirection = 1;
+    foodScale += foodScaleDirection * 0.015; // Замедлена анимация еды для мобильных
+    if(foodScale > 1.2) foodScaleDirection = -1;
+    else if(foodScale < 0.9) foodScaleDirection = 1;
 
     ctx.save();
     ctx.translate(x + box/2, y + box/2);
@@ -278,15 +286,15 @@
   }
 
   function createParticles(x, y, color) {
-    for(let i=0; i < 15; i++) {
+    for(let i=0; i < 10; i++) { // Уменьшено количество частиц для производительности
       particles.push({
         x: x + box/2,
         y: y + box/2,
-        vx: (Math.random() - 0.5) * 4,
-        vy: (Math.random() - 0.5) * 4,
-        life: 20 + Math.random()*10,
+        vx: (Math.random() - 0.5) * 3,
+        vy: (Math.random() - 0.5) * 3,
+        life: 15 + Math.random()*8,
         color: color,
-        size: 3 + Math.random()*3,
+        size: 2 + Math.random()*2,
       });
     }
   }
@@ -302,7 +310,7 @@
       p.x += p.vx;
       p.y += p.vy;
       p.life--;
-      p.size *= 0.95;
+      p.size *= 0.96;
 
       if(p.life <= 0 || p.size < 0.1) particles.splice(i, 1);
     }
@@ -316,7 +324,7 @@
   }
 
   function gameOver() {
-    tg.showAlert('Игра окончена! Очки: ' + score); // Используем Telegram API для алерта вместо стандартного
+    tg.showAlert('Игра окончена! Очки: ' + score);
     initGame();
   }
 
