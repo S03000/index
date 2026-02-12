@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Вход — PulsePress{% endblock %}
+{% block content %}
+<section class="container section auth-wrap">
+  <h1>Вход в редакцию</h1>
+  <form method="post" class="auth-form">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn-primary">Войти</button>
+  </form>
+</section>
+{% endblock %}
