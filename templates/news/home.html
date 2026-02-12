@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}PulsePress — Главная{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="container hero-grid">
+    <div>
+      <p class="eyebrow">AI + LIVE ОБНОВЛЕНИЯ</p>
+      <h1>Новостной сайт нового поколения</h1>
+      <p>Персональная лента, интерактив, лайки, комментарии, поиск, фильтрация и современный дизайн.</p>
+      <a href="{% url 'news:article_list' %}" class="btn-primary">Читать новости</a>
+    </div>
+    <aside class="trending-card">
+      <h3>🔥 В тренде</h3>
+      <ul>
+        {% for item in trends %}
+          <li><a href="{{ item.get_absolute_url }}">{{ item.title }}</a></li>
+        {% empty %}
+          <li>Пока нет трендов.</li>
+        {% endfor %}
+      </ul>
+    </aside>
+  </div>
+</section>
+
+<section class="container section">
+  <h2>Главные материалы</h2>
+  <div class="cards-grid">
+    {% for article in featured %}
+      <article class="news-card feature">
+        <span class="badge">{{ article.category.name }}</span>
+        <h3><a href="{{ article.get_absolute_url }}">{{ article.title }}</a></h3>
+        <p>{{ article.excerpt }}</p>
+      </article>
+    {% empty %}
+      <p>Добавьте статьи с флагом "is_featured" в админке.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="container section two-col">
+  <div>
+    <h2>Последние новости</h2>
+    <div class="cards-grid compact">
+      {% for article in latest %}
+        <article class="news-card">
+          <h3><a href="{{ article.get_absolute_url }}">{{ article.title }}</a></h3>
+          <p>{{ article.excerpt|truncatechars:120 }}</p>
+          <div class="meta">{{ article.author.username }} • {{ article.published_at|date:"d.m.Y H:i" }}</div>
+        </article>
+      {% endfor %}
+    </div>
+  </div>
+  <aside>
+    <h2>Категории</h2>
+    <div class="tags-wrap">
+      {% for category in categories %}
+        <a class="tag" href="{% url 'news:article_list' %}?category={{ category.slug }}">{{ category.name }} ({{ category.total }})</a>
+      {% endfor %}
+    </div>
+    <form class="newsletter" method="post" action="{% url 'news:newsletter_subscribe' %}">
+      {% csrf_token %}
+      <h3>Подпишитесь на digest</h3>
+      {{ newsletter_form.email }}
+      <button class="btn-primary">Подписаться</button>
+    </form>
+  </aside>
+</section>
+{% endblock %}

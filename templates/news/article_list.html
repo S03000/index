@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}PulsePress — Лента{% endblock %}
+{% block content %}
+<section class="container section">
+  <h1>Лента новостей</h1>
+  <form class="filters" method="get">
+    <input type="search" name="q" value="{{ query }}" placeholder="Поиск новостей...">
+    <select name="category">
+      <option value="">Все категории</option>
+      {% for category in categories %}
+        <option value="{{ category.slug }}" {% if selected_category == category.slug %}selected{% endif %}>{{ category.name }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn-primary">Найти</button>
+  </form>
+
+  <div class="tags-wrap">
+    {% for tag in tags %}
+      <a class="tag {% if selected_tag == tag.slug %}active{% endif %}" href="?{% if query %}q={{ query }}&{% endif %}{% if selected_category %}category={{ selected_category }}&{% endif %}tag={{ tag.slug }}">#{{ tag.name }}</a>
+    {% endfor %}
+  </div>
+
+  <div class="cards-grid compact">
+    {% for article in articles %}
+      <article class="news-card">
+        <span class="badge">{{ article.category.name }}</span>
+        <h3><a href="{{ article.get_absolute_url }}">{{ article.title }}</a></h3>
+        <p>{{ article.excerpt }}</p>
+        <div class="meta">👁 {{ article.views_count }} • ❤️ {{ article.likes.count }}</div>
+      </article>
+    {% empty %}
+      <p>По вашему запросу ничего не найдено.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
